@@ -1,0 +1,41 @@
+[gd_scene load_steps=7 format=2]
+
+[ext_resource path="res://scenes/RigidBody.tscn" type="PackedScene" id=1]
+
+[sub_resource type="CubeMesh" id=1]
+size = Vector3( 200, 1, 200 )
+
+[sub_resource type="OpenSimplexNoise" id=2]
+period = 0.1
+persistence = 0.0
+lacunarity = 4.0
+
+[sub_resource type="NoiseTexture" id=3]
+seamless = true
+noise = SubResource( 2 )
+
+[sub_resource type="SpatialMaterial" id=4]
+albedo_color = Color( 0.47451, 0.47451, 0.47451, 1 )
+albedo_texture = SubResource( 3 )
+uv1_scale = Vector3( 4, 4, 1 )
+
+[sub_resource type="ConcavePolygonShape" id=5]
+data = PoolVector3Array( -100, 0.5, 100, 100, 0.5, 100, -100, -0.5, 100, 100, 0.5, 100, 100, -0.5, 100, -100, -0.5, 100, 100, 0.5, -100, -100, 0.5, -100, 100, -0.5, -100, -100, 0.5, -100, -100, -0.5, -100, 100, -0.5, -100, 100, 0.5, 100, 100, 0.5, -100, 100, -0.5, 100, 100, 0.5, -100, 100, -0.5, -100, 100, -0.5, 100, -100, 0.5, -100, -100, 0.5, 100, -100, -0.5, -100, -100, 0.5, 100, -100, -0.5, 100, -100, -0.5, -100, 100, 0.5, 100, -100, 0.5, 100, 100, 0.5, -100, -100, 0.5, 100, -100, 0.5, -100, 100, 0.5, -100, -100, -0.5, 100, 100, -0.5, 100, -100, -0.5, -100, 100, -0.5, 100, 100, -0.5, -100, -100, -0.5, -100 )
+
+[node name="World" type="Spatial"]
+
+[node name="Ground" type="MeshInstance" parent="."]
+mesh = SubResource( 1 )
+material/0 = SubResource( 4 )
+
+[node name="StaticBody" type="StaticBody" parent="Ground"]
+collision_mask = 3
+
+[node name="CollisionShape" type="CollisionShape" parent="Ground/StaticBody"]
+shape = SubResource( 5 )
+
+[node name="DirectionalLight" type="DirectionalLight" parent="."]
+transform = Transform( 1, 0, 0, 0, 0.403114, 0.91515, 0, -0.91515, 0.403114, 0, 37.6851, 0 )
+
+[node name="SimpleVehicle" parent="." instance=ExtResource( 1 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.57238, 0 )
