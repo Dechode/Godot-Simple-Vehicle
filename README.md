@@ -1,4 +1,4 @@
-# Godot-SimpleVehicle
+# Godot Simple Vehicle
 Simple rigidbody based vehicle controller with adjustable raycast suspension
 
 ## Controls
