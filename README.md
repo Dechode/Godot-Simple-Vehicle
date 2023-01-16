@@ -8,7 +8,7 @@ Simple rigidbody based vehicle controller with adjustable raycast suspension
 
 ## Help
 
-Make sure the physics FPS is set to atleast 120 or the physics start to get weird. In this project it is set to 240, which works fine for me.
+Make sure the physics FPS is set to atleast 120 or the physics start to get weird. In this project it is set to 240.
 
 
 ## License
