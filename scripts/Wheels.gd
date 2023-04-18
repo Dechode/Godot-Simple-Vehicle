@@ -1,23 +1,21 @@
-extends RayCast
+extends RayCast3D
 
 
-export (float) var spring_length = 0.2
-export (float) var springstiffness = 8000
-export (float) var bump = 5000
-export (float) var rebound = 6000
+@export var spring_length := 0.2
+@export var springstiffness := 8000
+@export var bump := 5000
+@export var rebound := 6000
 
-
-export (float) var wheel_inertia = 1.6
-export (float) var tire_radius = 0.3
-export (float) var ackermann = 0.15
+@export var wheel_inertia := 1.6
+@export var tire_radius := 0.3
+@export var ackermann := 0.15
 
 ############# For curve tire formula #############
-export (Curve) var lateral_force = null
-export (Curve) var longitudinal_force = null
+@export var lateral_force: Curve = null
+@export var longitudinal_force: Curve = null
 
-var mu = 1.0 # Friction coefficient
+var mu := 1.0 # Friction coefficient
 var y_force: float = 0.0
-var braketorque: float = 0.0
 
 var spin: float = 0.0
 var z_vel: float = 0.0
@@ -33,25 +31,25 @@ var peak_sa: float = 0.10
 var prev_compress: float = 0.0
 var spring_curr_length: float = spring_length
 
-onready var car = $'..' #Get the parent node as car
+@onready var car = $'..' #Get the parent node as car
 
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	set_cast_to(Vector3.DOWN * (spring_length + tire_radius))
+	set_target_position(Vector3.DOWN * (spring_length + tire_radius))
 	peak_sa = lateral_force.get_point_position(1).x
 	peak_sr = longitudinal_force.get_point_position(1).x
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
-	$WheelMesh.translation.y = -spring_curr_length
+	$WheelMesh.position.y = -spring_curr_length
 	$WheelMesh.rotate_x(wrapf(-spin * delta,0, TAU))
 
 
 func apply_forces(delta):
 	############# Local forward velocity #############
-	local_vel = global_transform.basis.xform_inv((global_transform.origin - prev_pos) / delta)
+	local_vel = ((global_transform.origin - prev_pos) / delta) * global_transform.basis
 	z_vel = -local_vel.z
 	var planar_vect = Vector2(local_vel.x, local_vel.z).normalized()
 	prev_pos = global_transform.origin
@@ -107,8 +105,7 @@ func apply_forces(delta):
 	
 	x_force = TireForce(abs(sa_modified), y_force, lateral_force) * sign(slip_vec.x)
 	z_force = TireForce(abs(sr_modified), y_force, longitudinal_force) * sign(slip_vec.y)
-
-
+	
 	if resultant_slip != 0:
 		force_vec.x = x_force * abs(normalised_sa / resultant_slip)
 		force_vec.y = z_force * abs(normalised_sr / resultant_slip)
@@ -120,14 +117,13 @@ func apply_forces(delta):
 		var contact = get_collision_point() - car.global_transform.origin
 		var normal = get_collision_normal()
 		
-		car.add_force(normal * y_force, contact)
-		car.add_force(global_transform.basis.x * force_vec.x, contact)
-		car.add_force(global_transform.basis.z * force_vec.y, contact)
+		car.apply_force(normal * y_force, contact)
+		car.apply_force(global_transform.basis.x * force_vec.x, contact)
+		car.apply_force(global_transform.basis.z * force_vec.y, contact)
 	else:
 		spin -= sign(spin) * delta * 2 / wheel_inertia
 
 func apply_torque(drive, drive_inertia, brake_torque, delta):
-	braketorque = brake_torque
 	var prev_spin = spin
 
 	var net_torque = force_vec.y * tire_radius
@@ -147,7 +143,7 @@ func apply_torque(drive, drive_inertia, brake_torque, delta):
 
 func TireForce(slip: float, normal_load: float, tire_curve: Curve) -> float:
 	var friction = normal_load * mu
-	return tire_curve.interpolate_baked(abs(slip)) * friction * sign(slip)
+	return tire_curve.sample_baked(abs(slip)) * friction * sign(slip)
 
 
 func steer(input, max_steer):

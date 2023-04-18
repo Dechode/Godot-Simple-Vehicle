@@ -1,23 +1,24 @@
-extends RigidBody
+extends RigidBody3D
 
-export (float) var max_steer = 0.5 # In radians
-export (float) var Steer_Speed = 5.0
-export (float) var max_brake_force = 2500 # Total braking force in newtons
+@export var max_steer := 0.5 # In radians
+@export var Steer_Speed := 5.0
+@export var max_brake_force := 2500 # Total braking force in newtons
 
 #### Engine related stuff ####
-export (float) var max_torque = 250
-export (float) var max_engine_rpm = 8000.0
-export (float) var rpm_idle = 900
-export (Curve) var torque_curve = null
-export (float) var engine_drag = 0.03
-export (float) var engine_brake = 10.0
-export (float) var engine_moment = 0.25
-export (AudioStream) var engine_sound
+@export var max_torque := 250
+@export var max_engine_rpm := 8000.0
+@export var rpm_idle := 900
+@export var torque_curve: Curve
+@export var engine_drag := 0.03
+@export var engine_brake := 10.0
+@export var engine_moment := 0.25
+@export var engine_sound: AudioStream
 
 #### Drivetrain related stuff ####
-export (Array) var gear_ratios = [ 3.0, 2.2, 1.7, 1.4, 1.0, 0.9 ] 
-export (float) var final_drive = 3.7
-export (float) var reverse_ratio = 3.9
+@export var gear_ratios := [ 3.0, 2.2, 1.7, 1.4, 1.0, 0.9 ] 
+@export var final_drive := 3.7
+@export var reverse_ratio := 3.9
+@export var gearbox_inertia := 0.2
 
 #### Constants ####
 const AV_2_RPM: float = 60 / TAU
@@ -43,14 +44,15 @@ var wheel_radius: float = 0.0
 var avg_rear_spin = 0.0
 var avg_front_spin = 0.0
 
-onready var wheel_fl = $WheelFL
-onready var wheel_fr = $WheelFR
-onready var wheel_bl = $WheelBL
-onready var wheel_br = $WheelBR
-onready var audioplayer = $EngineSound
+@onready var wheel_fl = $WheelFL
+@onready var wheel_fr = $WheelFR
+@onready var wheel_bl = $WheelBL
+@onready var wheel_br = $WheelBR
+@onready var audioplayer = $EngineSound
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	
 	pass # Replace with function body.
 
 
@@ -65,8 +67,6 @@ func _process(delta: float) -> void:
 	brake_input = Input.get_action_strength("Brake")
 	steering_input = Input.get_action_strength("SteerLeft") - Input.get_action_strength("SteerRight")
 	throttle_input = Input.get_action_strength("Throttle")
-	prints("front left rotation",wheel_fl.rotation_degrees.y)
-	prints("front right rotation",wheel_fr.rotation_degrees.y)
 	
 	brake_force = max_brake_force * brake_input * 0.25 # Per Wheel
 	
@@ -74,7 +74,6 @@ func _process(delta: float) -> void:
 	engineSound()
 	
 func _physics_process(delta: float) -> void:
-	
 	wheel_bl.apply_forces(delta)
 	wheel_br.apply_forces(delta)
 	wheel_fl.apply_forces(delta)
@@ -117,7 +116,7 @@ func _physics_process(delta: float) -> void:
 
 func engineTorque(r_p_m) -> float: 
 	var rpm_factor = clamp(r_p_m / max_engine_rpm, 0.0, 1.0)
-	var torque_factor = torque_curve.interpolate_baked(rpm_factor)
+	var torque_factor = torque_curve.sample_baked(rpm_factor)
 	return torque_factor * max_torque
 
 
@@ -155,7 +154,7 @@ func gearRatios():
 
 
 func rwd(drive, delta):
-	drive_inertia = engine_moment + pow(abs(gearRatios()), 2) * 0.3 
+	drive_inertia = engine_moment + pow(abs(gearRatios()), 2) * gearbox_inertia 
 	wheel_bl.apply_torque(drive * 0.5, drive_inertia, brake_force, delta)
 	wheel_br.apply_torque(drive * 0.5, drive_inertia, brake_force, delta)
 	wheel_fl.apply_torque(0.0, 0.0, brake_force, delta)
