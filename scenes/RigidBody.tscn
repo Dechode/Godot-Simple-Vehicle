@@ -1,16 +1,15 @@
 [gd_scene load_steps=16 format=3 uid="uid://bu56j20ra22af"]
 
-[ext_resource type="Script" path="res://scripts/BaseCar.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/Wheels.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/Car.cs" id="1_17wsq"]
+[ext_resource type="Script" path="res://scripts/WheelSuspension.cs" id="2_68hu2"]
+[ext_resource type="Curve" uid="uid://bmkhodbu2q3mk" path="res://curves/TorqueCurve.tres" id="2_hkwr3"]
 [ext_resource type="AudioStream" path="res://sounds/tres/EngineSample.tres" id="3"]
 [ext_resource type="PackedScene" uid="uid://cx0wlx17i3fsd" path="res://models/kenney_car_pack/truck.glb" id="4"]
 [ext_resource type="Material" uid="uid://bu81ohapwyhlj" path="res://models/kenney_car_pack/_defaultMat.material" id="5"]
+[ext_resource type="Curve" uid="uid://bcid4p40fgpt3" path="res://curves/LatForceCurve.tres" id="5_88ewk"]
 [ext_resource type="Material" uid="uid://dl0b205hyv4n5" path="res://models/kenney_car_pack/carTire.material" id="6"]
+[ext_resource type="Curve" uid="uid://c1rfut8ttsain" path="res://curves/LonForceCurve.tres" id="6_ajhoj"]
 [ext_resource type="Script" path="res://scripts/camera/FollowCamera.gd" id="7"]
-
-[sub_resource type="Curve" id="3"]
-_data = [Vector2(0, 0.490909), 0.0, 0.0, 0, 0, Vector2(0.367925, 1), 0.0, 0.0, 0, 0, Vector2(0.716981, 0.981818), 0.0, 0.0, 0, 0, Vector2(1, 0.736364), 0.0, 0.0, 0, 0]
-point_count = 4
 
 [sub_resource type="BoxMesh" id="1"]
 size = Vector3(1.8, 0.7, 4.5)
@@ -23,16 +22,6 @@ size = Vector3(1.35, 0.26, 0.8)
 
 [sub_resource type="BoxMesh" id="7"]
 size = Vector3(1.6, 0.7, 2)
-
-[sub_resource type="Curve" id="4"]
-max_value = 1.2
-_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.141509, 1.2), 0.0, 0.0, 0, 0, Vector2(0.396226, 1.2), 0.0, 0.0, 0, 0, Vector2(1, 1.00364), 0.0, 0.0, 0, 0]
-point_count = 4
-
-[sub_resource type="Curve" id="5"]
-max_value = 1.2
-_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.117925, 1.2), 0.0, 0.0, 0, 0, Vector2(0.320755, 1.09091), 0.0, 0.0, 0, 0, Vector2(1, 0.96), 0.0, 0.0, 0, 0]
-point_count = 4
 
 [sub_resource type="ArrayMesh" id="2"]
 resource_name = "truck_Mesh wheel_frontLeft"
@@ -61,9 +50,17 @@ _surfaces = [{
 [node name="SimpleVehicle" type="RigidBody3D"]
 collision_layer = 2
 mass = 1000.0
-script = ExtResource("1")
-torque_curve = SubResource("3")
-engine_sound = ExtResource("3")
+center_of_mass_mode = 1
+center_of_mass = Vector3(0, -0.3, 0)
+script = ExtResource("1_17wsq")
+EngineTorqueCurve = ExtResource("2_hkwr3")
+EngineSound = ExtResource("3")
+FinalDrive = 3.9
+PathToAudioPlayer = NodePath("EngineSound")
+PathToWheelFL = NodePath("WheelFL")
+PathToWheelFR = NodePath("WheelFR")
+PathToWheelRL = NodePath("WheelBL")
+PathToWheelRR = NodePath("WheelBR")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 visible = false
@@ -84,12 +81,10 @@ mesh = SubResource("7")
 
 [node name="WheelBR" type="RayCast3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.81, -0.226407, 1.14)
-script = ExtResource("2")
-springstiffness = 10000
-tire_radius = 0.35
-ackermann = 0.0
-lateral_force = SubResource("4")
-longitudinal_force = SubResource("5")
+script = ExtResource("2_68hu2")
+Ackermann = 0.0
+LateralForce = ExtResource("5_88ewk")
+LongitudinalForce = ExtResource("6_ajhoj")
 
 [node name="WheelMesh" type="MeshInstance3D" parent="WheelBR"]
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, -0.25, 0, 0)
@@ -97,12 +92,10 @@ mesh = SubResource("2")
 
 [node name="WheelBL" type="RayCast3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.81, -0.226407, 1.14)
-script = ExtResource("2")
-springstiffness = 10000
-tire_radius = 0.35
-ackermann = 0.0
-lateral_force = SubResource("4")
-longitudinal_force = SubResource("5")
+script = ExtResource("2_68hu2")
+Ackermann = 0.0
+LateralForce = ExtResource("5_88ewk")
+LongitudinalForce = ExtResource("6_ajhoj")
 
 [node name="WheelMesh" type="MeshInstance3D" parent="WheelBL"]
 transform = Transform3D(-1.5, 0, -1.31134e-07, 0, 1.5, 0, 1.31134e-07, 0, -1.5, 0.25, 0, 0)
@@ -110,12 +103,10 @@ mesh = SubResource("2")
 
 [node name="WheelFR" type="RayCast3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.81, -0.226407, -1.26)
-script = ExtResource("2")
-springstiffness = 10000
-tire_radius = 0.35
-ackermann = -0.15
-lateral_force = SubResource("4")
-longitudinal_force = SubResource("5")
+script = ExtResource("2_68hu2")
+Ackermann = -0.15
+LateralForce = ExtResource("5_88ewk")
+LongitudinalForce = ExtResource("6_ajhoj")
 
 [node name="WheelMesh" type="MeshInstance3D" parent="WheelFR"]
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, -0.25, 0, 0)
@@ -123,11 +114,9 @@ mesh = SubResource("2")
 
 [node name="WheelFL" type="RayCast3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.81, -0.226407, -1.26)
-script = ExtResource("2")
-springstiffness = 10000
-tire_radius = 0.35
-lateral_force = SubResource("4")
-longitudinal_force = SubResource("5")
+script = ExtResource("2_68hu2")
+LateralForce = ExtResource("5_88ewk")
+LongitudinalForce = ExtResource("6_ajhoj")
 
 [node name="WheelMesh" type="MeshInstance3D" parent="WheelFL"]
 transform = Transform3D(-1.5, 0, -1.31134e-07, 0, 1.5, 0, 1.31134e-07, 0, -1.5, 0.25, 0, 0)

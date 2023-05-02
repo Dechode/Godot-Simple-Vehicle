@@ -1,12 +1,7 @@
-[gd_scene load_steps=7 format=3 uid="uid://bpwyh01wcy162"]
+[gd_scene load_steps=6 format=3 uid="uid://bpwyh01wcy162"]
 
 [ext_resource type="PackedScene" uid="uid://bu56j20ra22af" path="res://scenes/RigidBody.tscn" id="1"]
-
-[sub_resource type="BoxMesh" id="1"]
-size = Vector3(200, 1, 200)
-
-[sub_resource type="ConcavePolygonShape3D" id="5"]
-data = PackedVector3Array(-100, 0.5, 100, 100, 0.5, 100, -100, -0.5, 100, 100, 0.5, 100, 100, -0.5, 100, -100, -0.5, 100, 100, 0.5, -100, -100, 0.5, -100, 100, -0.5, -100, -100, 0.5, -100, -100, -0.5, -100, 100, -0.5, -100, 100, 0.5, 100, 100, 0.5, -100, 100, -0.5, 100, 100, 0.5, -100, 100, -0.5, -100, 100, -0.5, 100, -100, 0.5, -100, -100, 0.5, 100, -100, -0.5, -100, -100, 0.5, 100, -100, -0.5, 100, -100, -0.5, -100, 100, 0.5, 100, -100, 0.5, 100, 100, 0.5, -100, -100, 0.5, 100, -100, 0.5, -100, 100, 0.5, -100, -100, -0.5, 100, 100, -0.5, 100, -100, -0.5, -100, 100, -0.5, 100, 100, -0.5, -100, -100, -0.5, -100)
+[ext_resource type="PackedScene" uid="uid://dstqactdvakvr" path="res://scenes/Track/NipponPower.glb" id="2_f6q2t"]
 
 [sub_resource type="PhysicalSkyMaterial" id="PhysicalSkyMaterial_w6001"]
 rayleigh_coefficient = 0.73
@@ -28,15 +23,6 @@ tonemap_mode = 2
 
 [node name="World" type="Node3D"]
 
-[node name="Ground" type="MeshInstance3D" parent="."]
-mesh = SubResource("1")
-
-[node name="StaticBody3D" type="StaticBody3D" parent="Ground"]
-collision_mask = 3
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground/StaticBody3D"]
-shape = SubResource("5")
-
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -0.398637, 0.917109, 0, -0.917109, -0.398637, 0.0488731, 7.48807, -0.0282383)
 shadow_enabled = true
@@ -47,3 +33,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.57238, 0)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_a0orh")
+
+[node name="NipponPower" parent="." instance=ExtResource("2_f6q2t")]
