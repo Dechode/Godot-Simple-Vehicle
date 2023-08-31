@@ -1,13 +1,13 @@
 extends RigidBody3D
 
 @export var max_steer := 0.5 # In radians
-@export var Steer_Speed := 5.0
+@export var steer_speed := 5.0
 @export var max_brake_force := 2500 # Total braking force in newtons
 
 #### Engine related stuff ####
 @export var max_torque := 250
 @export var max_engine_rpm := 8000.0
-@export var rpm_idle := 900
+@export var rpm_idle := 900.0
 @export var torque_curve: Curve
 @export var engine_drag := 0.03
 @export var engine_brake := 10.0
@@ -41,8 +41,8 @@ var drive_inertia: float = 0.0 #includes every inertia of the drivetrain
 var r_split: float = 0.5
 var wheel_radius: float = 0.0
 
-var avg_rear_spin = 0.0
-var avg_front_spin = 0.0
+var avg_rear_spin := 0.0
+var avg_front_spin := 0.0
 
 @onready var wheel_fl = $WheelFL
 @onready var wheel_fr = $WheelFR
@@ -62,6 +62,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ShiftDown"):
 		shiftDown()
 
+
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
 	brake_input = Input.get_action_strength("Brake")
@@ -73,6 +74,7 @@ func _process(delta: float) -> void:
 	speedo = avg_front_spin * wheel_radius * 3.6
 	engineSound()
 	
+	
 func _physics_process(delta: float) -> void:
 	wheel_bl.apply_forces(delta)
 	wheel_br.apply_forces(delta)
@@ -81,12 +83,12 @@ func _physics_process(delta: float) -> void:
 	
 	##### Steering with steer speed #####
 	if (steering_input < steering_amount):
-		steering_amount -= Steer_Speed * delta
+		steering_amount -= steer_speed * delta
 		if (steering_input > steering_amount):
 			steering_amount = steering_input
 	
 	elif (steering_input > steering_amount):
-		steering_amount += Steer_Speed * delta
+		steering_amount += steer_speed * delta
 		if (steering_input < steering_amount):
 			steering_amount = steering_input
 	
@@ -95,7 +97,7 @@ func _physics_process(delta: float) -> void:
 	
 	#### Engine Loop ####
 	drag_torque = engine_brake + rpm * engine_drag
-	torque_out = (engineTorque(rpm) + drag_torque ) * throttle_input
+	torque_out = (get_engine_torque(rpm) + drag_torque ) * throttle_input
 	rpm += AV_2_RPM * delta * (torque_out - drag_torque) / engine_moment
 	
 	if rpm >= max_engine_rpm:
@@ -114,7 +116,7 @@ func _physics_process(delta: float) -> void:
 	rpm = max(rpm , rpm_idle)
 
 
-func engineTorque(r_p_m) -> float: 
+func get_engine_torque(r_p_m) -> float: 
 	var rpm_factor = clamp(r_p_m / max_engine_rpm, 0.0, 1.0)
 	var torque_factor = torque_curve.sample_baked(rpm_factor)
 	return torque_factor * max_torque
@@ -135,16 +137,16 @@ func engage(delta):
 	avg_front_spin = 0.0
 	avg_rear_spin += (wheel_bl.spin + wheel_br.spin) * 0.5
 	avg_front_spin += (wheel_fl.spin + wheel_fr.spin) * 0.5
-	var net_drive = (torque_out - drag_torque) * gearRatios()
+	var net_drive = (torque_out - drag_torque) * get_gear_ratios()
 	
-	if avg_rear_spin * sign(gearRatios()) < 0:
-		net_drive += drag_torque * gearRatios()
+	if avg_rear_spin * sign(get_gear_ratios()) < 0:
+		net_drive += drag_torque * get_gear_ratios()
 	
 	rwd(net_drive, delta)
-	rpm = avg_rear_spin * gearRatios() * AV_2_RPM
+	rpm = avg_rear_spin * get_gear_ratios() * AV_2_RPM
 	
 
-func gearRatios():
+func get_gear_ratios():
 	if selected_gear > 0:
 		return gear_ratios[selected_gear - 1] * final_drive
 	elif selected_gear == -1:
@@ -154,7 +156,7 @@ func gearRatios():
 
 
 func rwd(drive, delta):
-	drive_inertia = engine_moment + pow(abs(gearRatios()), 2) * gearbox_inertia 
+	drive_inertia = engine_moment + pow(abs(get_gear_ratios()), 2) * gearbox_inertia 
 	wheel_bl.apply_torque(drive * 0.5, drive_inertia, brake_force, delta)
 	wheel_br.apply_torque(drive * 0.5, drive_inertia, brake_force, delta)
 	wheel_fl.apply_torque(0.0, 0.0, brake_force, delta)

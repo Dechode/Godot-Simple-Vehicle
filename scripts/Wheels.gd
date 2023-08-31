@@ -2,9 +2,9 @@ extends RayCast3D
 
 
 @export var spring_length := 0.2
-@export var springstiffness := 8000
-@export var bump := 5000
-@export var rebound := 6000
+@export var spring_stiffness := 8000.0
+@export var bump := 5000.0
+@export var rebound := 6000.0
 
 @export var wheel_inertia := 1.6
 @export var tire_radius := 0.3
@@ -19,7 +19,7 @@ var y_force: float = 0.0
 
 var spin: float = 0.0
 var z_vel: float = 0.0
-var local_vel
+var local_vel := Vector3.ZERO
 
 var force_vec = Vector2.ZERO
 var slip_vec: Vector2 = Vector2.ZERO
@@ -31,7 +31,7 @@ var peak_sa: float = 0.10
 var prev_compress: float = 0.0
 var spring_curr_length: float = spring_length
 
-@onready var car = $'..' #Get the parent node as car
+@onready var car  = $'..' #Get the parent node as car
 
 
 # Called when the node enters the scene tree for the first time.
@@ -61,7 +61,7 @@ func apply_forces(delta):
 		spring_curr_length = spring_length
 		
 	var compress = clamp(1 - spring_curr_length / spring_length, 0.0, 1.0) 
-	y_force = springstiffness * compress# * spring_length
+	y_force = spring_stiffness * compress# * spring_length
 #	print(compress)
 	var compress_speed = compress - prev_compress
 	
@@ -103,8 +103,8 @@ func apply_forces(delta):
 	
 	############### Apply the forces #######################
 	
-	x_force = TireForce(abs(sa_modified), y_force, lateral_force) * sign(slip_vec.x)
-	z_force = TireForce(abs(sr_modified), y_force, longitudinal_force) * sign(slip_vec.y)
+	x_force = tire_force(abs(sa_modified), y_force, lateral_force) * sign(slip_vec.x)
+	z_force = tire_force(abs(sr_modified), y_force, longitudinal_force) * sign(slip_vec.y)
 	
 	if resultant_slip != 0:
 		force_vec.x = x_force * abs(normalised_sa / resultant_slip)
@@ -122,6 +122,7 @@ func apply_forces(delta):
 		car.apply_force(global_transform.basis.z * force_vec.y, contact)
 	else:
 		spin -= sign(spin) * delta * 2 / wheel_inertia
+
 
 func apply_torque(drive, drive_inertia, brake_torque, delta):
 	var prev_spin = spin
@@ -141,7 +142,7 @@ func apply_torque(drive, drive_inertia, brake_torque, delta):
 		return (spin - prev_spin) * (wheel_inertia + drive_inertia) / (drive * delta)
 
 
-func TireForce(slip: float, normal_load: float, tire_curve: Curve) -> float:
+func tire_force(slip: float, normal_load: float, tire_curve: Curve) -> float:
 	var friction = normal_load * mu
 	return tire_curve.sample_baked(abs(slip)) * friction * sign(slip)
 
