@@ -10,6 +10,7 @@ extends ShapeCast3D
 
 @export var wheel_inertia := 1.6
 @export var tire_radius := 0.3
+@export var tire_width := 0.2
 @export var ackermann := 0.15
 
 @export var friction_coefficient := 1.0
@@ -43,6 +44,10 @@ var spring_curr_length: float = spring_length
 func _ready() -> void:
 	# Vector3.RIGHT because shapecasts are rotated 90 degrees
 	set_target_position(Vector3.RIGHT * spring_length)
+	if shape is CylinderShape3D:
+		print_debug("Wheel collider is cylinder")
+		shape.radius = tire_radius
+		shape.height = tire_width
 	peak_sa = lateral_force.get_point_position(1).x
 	peak_sr = longitudinal_force.get_point_position(1).x
 
