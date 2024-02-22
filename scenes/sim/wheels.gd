@@ -41,7 +41,8 @@ var spring_curr_length: float = spring_length
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	set_target_position(Vector3.RIGHT * (spring_length + tire_radius))
+	# Vector3.RIGHT because shapecasts are rotated 90 degrees
+	set_target_position(Vector3.RIGHT * spring_length)
 	peak_sa = lateral_force.get_point_position(1).x
 	peak_sr = longitudinal_force.get_point_position(1).x
 
