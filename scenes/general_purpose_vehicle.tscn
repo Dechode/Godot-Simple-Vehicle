@@ -100,6 +100,7 @@ shadow_mesh = SubResource("ArrayMesh_qirc7")
 collision_layer = 2
 mass = 1300.0
 script = ExtResource("1_c5frj")
+max_brake_force = 10000
 torque_curve = SubResource("3")
 engine_sound = ExtResource("2_pwjr3")
 final_drive = 4.5
@@ -216,5 +217,17 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.73, 0.63)
 
 [node name="truck" parent="." instance=ExtResource("5_ttd5w")]
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, -0.8, 0.24)
+
+[node name="wheel_backLeft" parent="truck/tmpParent/truck" index="1"]
+visible = false
+
+[node name="wheel_backRight" parent="truck/tmpParent/truck" index="2"]
+visible = false
+
+[node name="wheel_frontLeft" parent="truck/tmpParent/truck" index="3"]
+visible = false
+
+[node name="wheel_frontRight" parent="truck/tmpParent/truck" index="4"]
+visible = false
 
 [editable path="truck"]
