@@ -36,24 +36,21 @@ var torque_out: float = 0.0
 
 var brake_force: float = 0.0
 var rpm: float = 0.0
-var speedo: int = 0
+#var speedo: int = 0
 var drive_inertia: float = 0.0 #includes every inertia of the drivetrain
-var r_split: float = 0.5
+#var r_split: float = 0.5
 var wheel_radius: float = 0.0
 
-var avg_rear_spin := 0.0
-var avg_front_spin := 0.0
+var wheels := []
 
-@onready var wheel_fl = $WheelFL
-@onready var wheel_fr = $WheelFR
-@onready var wheel_bl = $WheelBL
-@onready var wheel_br = $WheelBR
 @onready var audioplayer = $EngineSound
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	
-	pass # Replace with function body.
+	wheels.clear()
+	for child in get_children():
+		if child is WheelSuspension:
+			wheels.append(child)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -69,17 +66,13 @@ func _process(delta: float) -> void:
 	steering_input = Input.get_action_strength("SteerLeft") - Input.get_action_strength("SteerRight")
 	throttle_input = Input.get_action_strength("Throttle")
 	
-	brake_force = max_brake_force * brake_input * 0.25 # Per Wheel
+	brake_force = max_brake_force * brake_input / wheels.size() # Per Wheel
 	
-	speedo = avg_front_spin * wheel_radius * 3.6
+	#speedo = avg_front_spin * wheel_radius * 3.6
 	engineSound()
 	
 	
 func _physics_process(delta: float) -> void:
-	wheel_bl.apply_forces(delta)
-	wheel_br.apply_forces(delta)
-	wheel_fl.apply_forces(delta)
-	wheel_fr.apply_forces(delta)
 	
 	##### Steering with steer speed #####
 	if (steering_input < steering_amount):
@@ -92,8 +85,9 @@ func _physics_process(delta: float) -> void:
 		if (steering_input < steering_amount):
 			steering_amount = steering_input
 	
-	wheel_fl.steer(steering_amount, max_steer)
-	wheel_fr.steer(steering_amount, max_steer)
+	for w in wheels:
+		if w.is_steering:
+			w.steer(steering_amount, max_steer)
 	
 	#### Engine Loop ####
 	drag_torque = engine_brake + rpm * engine_drag
@@ -114,6 +108,9 @@ func _physics_process(delta: float) -> void:
 		clutch_rpm += throttle_input * 2000
 	rpm = max(rpm, clutch_rpm)
 	rpm = max(rpm , rpm_idle)
+	
+	for w in wheels:
+		w.apply_forces(delta)
 
 
 func get_engine_torque(r_p_m) -> float: 
@@ -123,27 +120,22 @@ func get_engine_torque(r_p_m) -> float:
 
 
 func freewheel(delta):
-#	print(brake_force)
-	avg_front_spin = 0.0
-	avg_front_spin += (wheel_fl.spin + wheel_fr.spin) * 0.5
-	wheel_bl.apply_torque(0.0, 0.0, brake_force, delta)
-	wheel_br.apply_torque(0.0, 0.0, brake_force, delta)
-	wheel_fl.apply_torque(0.0, 0.0, brake_force, delta)
-	wheel_fr.apply_torque(0.0, 0.0, brake_force, delta)
+	for w in wheels:
+		w.apply_torque(0.0, 0.0, brake_force, delta)
 
 
 func engage(delta):
-	avg_rear_spin = 0.0
-	avg_front_spin = 0.0
-	avg_rear_spin += (wheel_bl.spin + wheel_br.spin) * 0.5
-	avg_front_spin += (wheel_fl.spin + wheel_fr.spin) * 0.5
+	var avg_spin := 0.0
+	for w in wheels:
+		if w.is_driven:
+			avg_spin += w.spin
 	var net_drive = (torque_out - drag_torque) * get_gear_ratios()
-	
-	if avg_rear_spin * sign(get_gear_ratios()) < 0:
+	avg_spin /= wheels.size()
+	if avg_spin * sign(get_gear_ratios()) < 0:
 		net_drive += drag_torque * get_gear_ratios()
 	
-	rwd(net_drive, delta)
-	rpm = avg_rear_spin * get_gear_ratios() * AV_2_RPM
+	drive(net_drive, delta)
+	rpm = avg_spin * get_gear_ratios() * AV_2_RPM
 	
 
 func get_gear_ratios():
@@ -155,12 +147,18 @@ func get_gear_ratios():
 		return 0.0
 
 
-func rwd(drive, delta):
-	drive_inertia = engine_moment + pow(abs(get_gear_ratios()), 2) * gearbox_inertia 
-	wheel_bl.apply_torque(drive * 0.5, drive_inertia, brake_force, delta)
-	wheel_br.apply_torque(drive * 0.5, drive_inertia, brake_force, delta)
-	wheel_fl.apply_torque(0.0, 0.0, brake_force, delta)
-	wheel_fr.apply_torque(0.0, 0.0, brake_force, delta)
+func drive(drive_torque, delta):
+	drive_inertia = engine_moment + pow(abs(get_gear_ratios()), 2) * gearbox_inertia
+	var driven_count := 0
+	for w in wheels:
+		if w.is_driven:
+			driven_count += 1
+		
+	for w in wheels:
+		if w.is_driven:
+			w.apply_torque(drive_torque / driven_count, drive_inertia, brake_force, delta)
+		else:
+			w.apply_torque(0.0, 0.0, brake_force, delta)
 
 
 func engineSound():

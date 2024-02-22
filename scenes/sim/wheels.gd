@@ -1,6 +1,8 @@
-extends RayCast3D
+class_name WheelSuspension
+extends ShapeCast3D
 
-
+@export var is_driven := false
+@export var is_steering := false
 @export var spring_length := 0.2
 @export var spring_stiffness := 8000.0
 @export var bump := 5000.0
@@ -10,13 +12,16 @@ extends RayCast3D
 @export var tire_radius := 0.3
 @export var ackermann := 0.15
 
+@export var friction_coefficient := 1.0
+
 ############# For curve tire formula #############
 @export var lateral_force: Curve = null
 @export var longitudinal_force: Curve = null
 
+var antirollbar := 0.0
 var mu := 1.0 # Friction coefficient
 var y_force: float = 0.0
-
+var compress := 0.0
 var spin: float = 0.0
 var z_vel: float = 0.0
 var local_vel := Vector3.ZERO
@@ -36,55 +41,52 @@ var spring_curr_length: float = spring_length
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	set_target_position(Vector3.DOWN * (spring_length + tire_radius))
+	set_target_position(Vector3.RIGHT * (spring_length + tire_radius))
 	peak_sa = lateral_force.get_point_position(1).x
 	peak_sr = longitudinal_force.get_point_position(1).x
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
-	$WheelMesh.position.y = -spring_curr_length
-	$WheelMesh.rotate_x(wrapf(-spin * delta,0, TAU))
+	$WheelMesh.position.x = spring_curr_length
+	$WheelMesh.rotate_y(wrapf(-spin * delta,0, TAU))
 
 
 func apply_forces(delta):
 	############# Local forward velocity #############
 	local_vel = ((global_transform.origin - prev_pos) / delta) * global_transform.basis
 	z_vel = -local_vel.z
-	var planar_vect = Vector2(local_vel.x, local_vel.z).normalized()
+	var planar_vect = Vector2(local_vel.y, local_vel.z).normalized()
 	prev_pos = global_transform.origin
 	
 	############# Suspension #################
 	if is_colliding():
-		spring_curr_length = get_collision_point().distance_to(global_transform.origin) - tire_radius
+		spring_curr_length = get_collision_point(0).distance_to(global_transform.origin) - tire_radius
 	else:
 		spring_curr_length = spring_length
 		
-	var compress = clamp(1 - spring_curr_length / spring_length, 0.0, 1.0) 
+	compress = clamp(1 - spring_curr_length / spring_length, 0.0, 1.0) 
 	y_force = spring_stiffness * compress# * spring_length
-#	print(compress)
+	#print_debug(compress)
 	var compress_speed = compress - prev_compress
 	
 	if compress_speed >= 0:
 		y_force += (bump) * (compress - prev_compress) * spring_length / delta
 	else:
 		y_force += rebound * (compress - prev_compress) * spring_length  / delta
-		
+	
+	y_force += antirollbar
+	
 	y_force = max(0, y_force)
 	prev_compress = compress
 	
 	slip_vec.x = asin(clamp(-planar_vect.x, -1, 1)) # X slip is lateral slip
 	slip_vec.y = 0.0 # Y slip is the longitudinal Z slip
 	
-#	if is_colliding() and z_vel != 0:
 	if z_vel != 0:
-#		slip_vec.y = (z_vel - spin * tire_radius) / abs(z_vel)
 		slip_vec.y = -(spin * tire_radius - z_vel) / abs(z_vel)
 	else:
-		if spin == 0:
-			slip_vec.y = 0.0
-		else:
-			slip_vec.y = 0.01 * spin
+		slip_vec.y = -(spin * tire_radius - z_vel) / 0.0001
 	
 	############### Slip combination ###############
 	
@@ -98,27 +100,25 @@ func apply_forces(delta):
 	var sr_modified = resultant_slip * peak_sr
 	var sa_modified = resultant_slip * peak_sa
 	
-	var x_force: float = 0.0
-	var z_force: float = 0.0
-	
 	############### Apply the forces #######################
 	
-	x_force = tire_force(abs(sa_modified), y_force, lateral_force) * sign(slip_vec.x)
-	z_force = tire_force(abs(sr_modified), y_force, longitudinal_force) * sign(slip_vec.y)
+	force_vec.x = tire_force(abs(sa_modified), y_force, lateral_force) * sign(slip_vec.x)
+	force_vec.y = tire_force(abs(sr_modified), y_force, longitudinal_force) * sign(slip_vec.y)
 	
 	if resultant_slip != 0:
-		force_vec.x = x_force * abs(normalised_sa / resultant_slip)
-		force_vec.y = z_force * abs(normalised_sr / resultant_slip)
-	else:
-		force_vec.x = 0.0
-		force_vec.y = 0.0
+		force_vec.x *= abs(normalised_sa / resultant_slip)
+		force_vec.y *= abs(normalised_sr / resultant_slip)
+	
+	force_vec *= friction_coefficient
 	
 	if is_colliding():
-		var contact = get_collision_point() - car.global_transform.origin
-		var normal = get_collision_normal()
+		#print_debug(get_collision_count())
+		var contact = get_collision_point(0) - car.global_transform.origin
+		var normal = get_collision_normal(0)
 		
+		#car.apply_force(-transform.basis.x * y_force, contact)
 		car.apply_force(normal * y_force, contact)
-		car.apply_force(global_transform.basis.x * force_vec.x, contact)
+		car.apply_force(global_transform.basis.y * force_vec.x, contact)
 		car.apply_force(global_transform.basis.z * force_vec.y, contact)
 	else:
 		spin -= sign(spin) * delta * 2 / wheel_inertia
